@@ -44,7 +44,7 @@ class Move
 
   def small_straight(dice) 
     sorted_dice = dice.uniq.sort
-    sorted_dice[0..3] == [1, 2, 3, 4] || sorted_dice[0..3] == [2, 3, 4, 5] || sorted_dice[1..4]== [3, 4, 5, 6] ? 30 : 0
+    sorted_dice[0..3] == [1, 2, 3, 4] || sorted_dice[0..3] == [2, 3, 4, 5] || sorted_dice[0..3]== [3, 4, 5, 6] ? 30 : 0
   end
 
   def large_straight(dice)
