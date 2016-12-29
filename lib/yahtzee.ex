@@ -1,17 +1,25 @@
 defmodule Yahtzee do
-  @moduledoc """
-    Implements Yahtzee game
-  """
+  @moduledoc "Implements Yahtzee game"
 
   @combinations [
-    :ones, :twos, :threes, :fours, :fives, :sixes,
-    :three_of_a_kind, :four_of_a_kind, :yahtzee,
-    :full_house,
-    :small_straight, :large_straight,
-    :chance
+    ones:            {"1", "Ones"},
+    twos:            {"2", "Twos"},
+    threes:          {"3", "Threes"},
+    fours:           {"4", "Fours"},
+    fives:           {"5", "Fives"},
+    sixes:           {"6", "Sixes"},
+    three_of_a_kind: {"t", "Three Of A Kind"},
+    four_of_a_kind:  {"f", "Four Of A Kind"},
+    yahtzee:         {"y", "Yahtzee"},
+    full_house:      {"f", "Full House"},
+    small_straight:  {"s", "Small Straight"},
+    large_straight:  {"l", "Large Straight"},
+    chance:          {"?", "Chance"}
   ]
-
   def combinations, do: @combinations
+
+  @combination_symbols (for {k, _} <- @combinations, do: k)
+  def combination_symbols, do: @combinations
 
   @number_of_rolls 3
 
@@ -189,7 +197,7 @@ defmodule Yahtzee do
 
   """
   def game_over?(state) do
-    @combinations -- Map.keys(state) == []
+    @combination_symbols -- Map.keys(state) == []
   end
 
   def next_round(state) do
@@ -233,6 +241,9 @@ defmodule Yahtzee do
 
     next_roll(state, throws_left, dice, to_reroll)
   end
-end
 
-# Yahtzee.next_round %{}
+  @doc "Starts the game"
+  def start do
+    next_round %{}
+  end
+end
