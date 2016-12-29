@@ -11,7 +11,7 @@ defmodule Yahtzee do
     three_of_a_kind: {"t", "Three Of A Kind"},
     four_of_a_kind:  {"f", "Four Of A Kind"},
     yahtzee:         {"y", "Yahtzee"},
-    full_house:      {"f", "Full House"},
+    full_house:      {"h", "Full House"},
     small_straight:  {"s", "Small Straight"},
     large_straight:  {"l", "Large Straight"},
     chance:          {"?", "Chance"}
@@ -22,6 +22,8 @@ defmodule Yahtzee do
   def combination_symbols, do: @combinations
 
   @number_of_rolls 3
+
+  @initial_state %{upper_bonus: 0, total: 0}
 
   def x_of_a_kind_available(dice, x) do
     dice
@@ -112,6 +114,10 @@ defmodule Yahtzee do
 
       iex> Yahtzee.count_combination([2, 1, 3, 4, 4], :small_straight)
       30
+      iex> Yahtzee.count_combination([4, 5, 6, 1, 3], :small_straight)
+      30
+      iex> Yahtzee.count_combination([3, 4, 5, 1, 2], :small_straight)
+      30
       iex> Yahtzee.count_combination([3, 1, 3, 4, 4], :small_straight)
       0
 
@@ -160,7 +166,7 @@ defmodule Yahtzee do
 
   def count_combination(dice, :small_straight) do
     leftovers = [1, 2, 3, 4, 5, 6] -- dice
-    if leftovers in [[1, 2], [1, 6], [5, 6]], do: 30, else: 0
+    if leftovers in [[1, 2], [1, 6], [5, 6], [2], [5], [1], [6]], do: 30, else: 0
   end
 
   def count_combination(dice, :large_straight) do
@@ -177,14 +183,61 @@ defmodule Yahtzee do
 
   ## Examples
 
-      iex> Yahtzee.update_state(%{}, [1, 1, 1, 2, 3], :ones)
-      %{ones: 3}
+      iex> Yahtzee.update_state(%{upper_bonus: 0, total: 0}, [1, 1, 1, 2, 3], :ones)
+      %{ones: 3, upper_bonus: 0, total: 3}
 
-      iex> Yahtzee.update_state(%{twos: 2}, [1, 1, 1, 2, 3], :ones)
-      %{ones: 3, twos: 2}
+      iex> Yahtzee.update_state(%{twos: 2, upper_bonus: 0, total: 0}, [1, 1, 1, 2, 3], :ones)
+      %{ones: 3, twos: 2, upper_bonus: 0, total: 5}
   """
   def update_state(state, dice, combination) do
-    Map.merge(state, %{combination => count_combination(dice, combination)})
+    # Homework:
+    #   — Count lower
+    state =
+      state
+      |> Map.merge(%{combination => count_combination(dice, combination)})
+
+    state =
+      state
+      |> Map.merge(%{upper_bonus: count_upper_bonus(state)})
+
+    state
+    |> Map.merge(%{total: count_total(state)})
+  end
+
+  @doc """
+    Counts upper bonus for given state
+
+    ## Examples
+
+        iex> Yahtzee.count_upper_bonus(%{ones: 1, twos: 4, chance: 36, yahtzee: 50})
+        0
+        iex> Yahtzee.count_upper_bonus(%{sixes: 30, fives: 25, fours: 12})
+        35
+
+  """
+  def count_upper_bonus(state) do
+    upper_score =
+      ~w(ones twos threes fours fives sixes)a
+      |> Enum.reduce(0, &(&2 + (state[&1] || 0)))
+
+    if upper_score >= 63, do: 35, else: 0
+  end
+
+  @doc """
+    Counts total points for given state
+
+    ## Examples
+
+        iex> Yahtzee.count_total(%{ones: 5, twos: 10, large_straight: 38, upper_bonus: 35, total: 30})
+        88
+
+  """
+  def count_total(state) do
+    combination_sum =
+      @combination_symbols
+      |> Enum.reduce(0, &(&2 + (state[&1] || 0)))
+
+    combination_sum + state[:upper_bonus]
   end
 
   @doc """
@@ -232,18 +285,14 @@ defmodule Yahtzee do
   end
 
   def next_roll(state, throws_left, dice, []) do
-    # interactor should:
-    # 1. Show current roll
-    # 2. Show available combinations
-    # 3. Ask which dice to reroll
-    # 4. Return array of dice which weren't rerolled
-    to_reroll = Yahtzee.Interactor.ask_which_to_reroll(state, throws_left, dice)
-
-    next_roll(state, throws_left, dice, to_reroll)
+    case Yahtzee.Interactor.ask_which_to_reroll(state, throws_left, dice) do
+      [] -> next_roll(state, 0, dice, [])
+      to_reroll -> next_roll(state, throws_left, dice, to_reroll)
+    end
   end
 
   @doc "Starts the game"
   def start do
-    next_round %{}
+    next_round @initial_state
   end
 end
